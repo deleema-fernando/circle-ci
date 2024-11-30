@@ -72,7 +72,7 @@ jobs:
       - run:
           name: Build the application
           command: |
-            echo "Building version ${APP_VERSION}"
+            echo "Building version $APP_VERSION"
             make build VERSION=$APP_VERSION
       - persist_to_workspace:
           root: .
@@ -97,3 +97,20 @@ workflows:
           requires:
             - lint
             - test
+        
+
+  deploy_app:
+    jobs:
+      - lint
+      - test
+      - build:
+          requires:
+            - lint
+            - test
+      - deploy:
+          requires:
+            - build
+          filters:
+            tags:
+              only:
+                - /^v[0-9]+(\.[0-9]+)*$/
