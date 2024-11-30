@@ -24,8 +24,15 @@ func (r *heroes) Routes() *http.ServeMux {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		log := log.LoggerFromContext(r.Context())
 		log.Info("health check")
+
+		if _, err := w.Write([]byte("OK")); err != nil {
+			log.Error("failed to write response", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
 	})
 
 	return mux

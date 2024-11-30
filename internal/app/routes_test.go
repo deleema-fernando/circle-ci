@@ -1,7 +1,7 @@
 package app_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http/httptest"
 	"testing"
 
@@ -25,7 +25,7 @@ func TestHealth(t *testing.T) {
 	}
 
 	assert.Equal(t, 200, resp.StatusCode)
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Equal(t, "OK", string(body))
 }
