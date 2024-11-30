@@ -1,13 +1,13 @@
 version: 2.1
 
 commands:
-  save_cache:
+  save_go_cache:
     steps:
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
-  restore_cache:
+  restore_go_cache:
     steps:
       - restore_cache:
           keys:
@@ -28,11 +28,11 @@ jobs:
     steps:
       # Checkout the code as the first step.
       - checkout
-      - restore_cache
+      - restore_go_cache
       - run:
           name: Install Dependencies
           command: go mod download
-      - save_cache
+      - save_go_cache
       - run:
           name: Lint the code
           command: make lint
@@ -43,11 +43,11 @@ jobs:
     steps:
       # Checkout the code as the first step.
       - checkout
-      - restore_cache
+      - restore_go_cache
       - run:
           name: Install Dependencies
           command: go mod download
-      - save_cache
+      - save_go_cache
       - run:
           name: Run tests
           command: |
@@ -61,11 +61,11 @@ jobs:
       - image: cimg/go:1.23
     steps:
       - checkout
-      - restore_cache
+      - restore_go_cache
       - run:
           name: Install Dependencies
           command: go mod download
-      - save_cache
+      - save_go_cache
       - configure_version
       - run:
           name: Build the application
