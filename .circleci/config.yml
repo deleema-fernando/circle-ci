@@ -87,18 +87,20 @@ jobs:
       - image: cimg/go:1.23
     steps:
       - checkout
+      - configure_version
       - run:
-          name: Deploy to staging
-          command: echo "Deploying to staging server"
+          name: Deploy app << pipeline.git.tag >>
+          command: echo "Deploying app version $APP_VERSION"
 
   rollback:
     docker:
       - image: cimg/go:1.23
     steps:
       - checkout
+      - configure_version
       - run:
           name: Rollback to previous version
-          command: echo "Rolling back to previous version"
+          command: echo "Rolling back to previous version $APP_VERSION"
 
 workflows:
   lint-test-build:
