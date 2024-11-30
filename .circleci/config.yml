@@ -4,6 +4,11 @@ run_on_tag: &run_on_tag
   filters:
     tags: { only: "/.*/" }
 
+parameters:
+  rollback:
+    type: boolean
+    default: false
+
 commands:
   save_go_cache:
     steps:
@@ -23,6 +28,14 @@ commands:
           name: Configure App Version
           command: |
             echo 'export APP_VERSION='$CIRCLE_TAG >> $BASH_ENV
+            source $BASH_ENV
+
+  configure_rollback:
+    steps:
+      - run:
+          name: Configure rollback
+          command: |
+            echo 'export APP_VERSION='$(git tag --sort=creatordate | tail -n 2 | head -n 1) >> $BASH_ENV
             source $BASH_ENV
 
 jobs:
@@ -98,6 +111,7 @@ jobs:
     steps:
       - checkout
       - configure_version
+      - configure_rollback
       - run:
           name: Rollback to previous version
           command: echo "Rolling back to previous version $APP_VERSION"
@@ -141,3 +155,13 @@ workflows:
     jobs:
       - rollback:
           <<: *run_on_tag
+
+  rollback_previous:
+    when: << pipeline.parameters.rollback >>
+    jobs:
+      - approval:
+          name: 🚒 Rollback to previous version
+          type: approval
+      - rollback:
+          requires:
+            - 🚒 Rollback to previous version
