@@ -88,6 +88,15 @@ jobs:
           name: Deploy to staging
           command: echo "Deploying to staging server"
 
+  rollback:
+    docker:
+      - image: cimg/go:1.23
+    steps:
+      - checkout
+      - run:
+          name: Rollback to previous version
+          command: echo "Rolling back to previous version"
+
 workflows:
   lint-test-build:
     jobs:
@@ -100,6 +109,10 @@ workflows:
         
 
   deploy_app:
+    when:
+      matches:
+        pattern: /^v[0-9]+(\.[0-9]+)*$/
+        value: << pipeline.git.tag >>
     jobs:
       - lint
       - test
@@ -110,7 +123,11 @@ workflows:
       - deploy:
           requires:
             - build
-          filters:
-            tags:
-              only:
-                - /^v[0-9]+(\.[0-9]+)*$/
+
+  rollback_app:
+    when:
+      matches:
+        pattern: /^v[0-9]+(\.[0-9]+)*$-rollback/
+        value: << pipeline.git.tag >>
+    jobs:
+      - rollback
