@@ -18,7 +18,7 @@ commands:
       - run:
           name: Configure App Version
           command: |
-            echoe "export APP_VERSION=$(CIRCLECI_TAG)" >> $BASH_ENV
+            echo "export APP_VERSION=$(CIRCLE_TAG)" >> $BASH_ENV
             source $BASH_ENV
 
 jobs:
@@ -72,7 +72,7 @@ jobs:
       - run:
           name: Build the application
           command: |
-            echo "Building version $APP_VERSION"
+            echo "Building version ${APP_VERSION}"
             make build VERSION=$APP_VERSION
       - persist_to_workspace:
           root: .
