@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+
 	"super-heroes/internal/pkg/log"
 )
 

@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"log/slog"
+	"os"
 )
 
 type loggerKeyType string
@@ -14,7 +15,14 @@ func LoggerWithContext(ctx context.Context, logger *slog.Logger) context.Context
 }
 
 func LoggerFromContext(ctx context.Context) *slog.Logger {
-	logger := ctx.Value(loggerKeyTypeKey).(*slog.Logger)
+	if ctx == nil {
+		return slog.New(slog.NewTextHandler(os.Stdout, nil))
+	}
+
+	logger, ok := ctx.Value(loggerKeyTypeKey).(*slog.Logger)
+	if !ok {
+		return slog.New(slog.NewTextHandler(os.Stdout, nil))
+	}
 
 	return logger
 }
