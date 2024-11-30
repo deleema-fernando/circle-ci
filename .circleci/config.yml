@@ -1,36 +1,53 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/configuration-reference
-
-# For a detailed guide to building and testing with Go, read the docs:
-# https://circleci.com/docs/language-go/ for more details
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/jobs-steps/#jobs-overview & https://circleci.com/docs/configuration-reference/#jobs
-jobs:
-  build:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/executor-intro/ & https://circleci.com/docs/configuration-reference/#executor-job
-    docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/go
-      - image: cimg/go:1.23
+commands:
+  save_cache:
+    steps:
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+  restore_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/jobs-steps/#steps-overview & https://circleci.com/docs/configuration-reference/#steps
+  configure_version:
+    steps:
+      - run:
+          name: Configure App Version
+          command: |
+            echoe "export APP_VERSION=$(CIRCLECI_TAG)" >> $BASH_ENV
+            source $BASH_ENV
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/go:1.23
     steps:
       # Checkout the code as the first step.
       - checkout
-      - restore_cache:
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
+      - restore_cache
       - run:
           name: Install Dependencies
           command: go mod download
-      - save_cache:
-          key: go-mod-v4-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
+      - save_cache
+      - run:
+          name: Lint the code
+          command: make lint
+
+  test:
+    docker:
+      - image: cimg/go:1.23
+    steps:
+      # Checkout the code as the first step.
+      - checkout
+      - restore_cache
+      - run:
+          name: Install Dependencies
+          command: go mod download
+      - save_cache
       - run:
           name: Run tests
           command: |
@@ -39,10 +56,42 @@ jobs:
       - store_test_results:
           path: /tmp/test-reports
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
+  build:
+    docker:
+      - image: cimg/go:1.23
+    steps:
+      - checkout
+      - restore_cache
+      - run:
+          name: Install Dependencies
+          command: go mod download
+      - save_cache
+      - configure_version
+      - run:
+          name: Build the application
+          command: |
+            echo "Building version $APP_VERSION"
+            make build VERSION=$APP_VERSION
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./bin/app
+
+  deploy:
+    docker:
+      - image: cimg/go:1.23
+    steps:
+      - checkout
+      - run:
+          name: Deploy to staging
+          command: echo "Deploying to staging server"
+
 workflows:
-  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  lint-test-build:
     jobs:
-      - build
+      - lint
+      - test
+      - build:
+          requires:
+            - lint
+            - test
