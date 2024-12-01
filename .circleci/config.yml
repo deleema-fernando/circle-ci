@@ -136,7 +136,7 @@ jobs:
       - run:
           name: Push docker image
           command: |
-            echo "$DOCKER_PASSWORD" | docker login -u deleemafernando --password-stdin
+            docker login -u deleemafernando --p $(echo $DOCKER_PASSWORD) 
             docker tag deleemafernando/heroes:${APP_VERSION} deleemafernando/heroes:latest
             docker push deleemafernando/heroes:${APP_VERSION}
             docker push deleemafernando/heroes:latest
