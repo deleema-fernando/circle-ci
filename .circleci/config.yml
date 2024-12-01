@@ -113,17 +113,33 @@ jobs:
       - run:
           name: Save docker image
           command: |
-            docker save -o /tmp/app.tar app:latest
+            docker save deleemafernando/heroes:${APP_VERSION} | gzip -9 > heroes.tar.gz
+      - persist_to_workspace:
+          root: .
+          paths:
+            - heroes.tar.gz
 
   deploy:
     docker:
-      - image: cimg/go:1.23
+      - image: cimg/base:current
     steps:
       - checkout
       - configure_version
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - attach_workspace:
+          at: .
       - run:
-          name: Deploy app << pipeline.git.tag >>
-          command: echo "Deploying app version $APP_VERSION"
+          name: Load docker image
+          command: |
+            docker load -i heroes.tar.gz
+      - run:
+          name: Push docker image
+          command: |
+            echo "$DOCKER_PASSWORD" | docker login -u deleemafernando --password-stdin
+            docker tag deleemafernando/heroes:${APP_VERSION} deleemafernando/heroes:latest
+            docker push deleemafernando/heroes:${APP_VERSION}
+            docker push deleemafernando/heroes:latest
 
   rollback:
     docker:
@@ -163,10 +179,14 @@ workflows:
           requires:
             - lint
             - test
-      - deploy:
+      - build-image:
           <<: *run_on_tag
           requires:
             - build
+      - deploy:
+          <<: *run_on_tag
+          requires:
+            - build-image
 
   rollback_app:
     when:
