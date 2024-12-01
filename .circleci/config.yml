@@ -136,7 +136,7 @@ jobs:
       - run:
           name: Push docker image
           command: |
-            echo "$DOCKER_PASSWORD" | docker login -u deleemafernando --password-stdin
+            echo "$DOCKER_TOKEN" | docker login -u deleemafernando --password-stdin
             docker tag deleemafernando/heroes:${APP_VERSION} deleemafernando/heroes:latest
             docker push deleemafernando/heroes:${APP_VERSION}
             docker push deleemafernando/heroes:latest
@@ -176,12 +176,11 @@ workflows:
 
       - build:
           <<: *run_on_tag
-          requires:
-            - lint
-            - test
       - build-image:
           <<: *run_on_tag
           requires:
+            - lint
+            - test
             - build
       - deploy:
           <<: *run_on_tag
