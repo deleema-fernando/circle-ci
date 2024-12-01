@@ -45,28 +45,25 @@ func main() {
 	})
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			if errors.Is(err, http.ErrServerClosed) {
-				logger.Warn("server closed")
-				return
-			}
+		<-ctx.Done()
 
-			logger.Error("server error", "error", err)
+		timeOutCtx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelTimeout()
 
-			return
-		}
-	}()
-
-	<-ctx.Done()
-
-	timeOutCtx, cancelTimeout := context.WithTimeout(ctx, 5*time.Second)
-	defer cancelTimeout()
-
-	defer func() {
 		if err := server.Shutdown(timeOutCtx); err != nil {
 			logger.Error("server shutdown error", "error", err)
 		}
 	}()
 
-	<-timeOutCtx.Done()
+	if err := server.ListenAndServe(); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			logger.Warn("server closed")
+			return
+		}
+
+		logger.Error("server error", "error", err)
+
+		return
+	}
+
 }

@@ -94,6 +94,26 @@ jobs:
           root: .
           paths:
             - ./bin/app
+            - Dockerfile
+            - Makefile
+
+  build-image:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - attach_workspace:
+          at: .
+      - configure_version
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker image
+          command: |
+            make build-image VERSION=$APP_VERSION
+      - run:
+          name: Save docker image
+          command: |
+            docker save -o /tmp/app.tar app:latest
 
   deploy:
     docker:
