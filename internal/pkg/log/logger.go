@@ -6,9 +6,12 @@ import (
 	"os"
 )
 
-type loggerKeyType string
+type contextKey string
 
-const loggerKeyTypeKey loggerKeyType = "logger"
+const (
+	loggerKeyTypeKey contextKey = "logger"
+	RequestIDKey     contextKey = "request_id"
+)
 
 func LoggerWithContext(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, loggerKeyTypeKey, logger)
@@ -22,6 +25,11 @@ func LoggerFromContext(ctx context.Context) *slog.Logger {
 	logger, ok := ctx.Value(loggerKeyTypeKey).(*slog.Logger)
 	if !ok {
 		return slog.New(slog.NewTextHandler(os.Stdout, nil))
+	}
+
+	requestID, ok := ctx.Value(RequestIDKey).(string)
+	if ok {
+		logger = logger.With("request_id", requestID)
 	}
 
 	return logger
