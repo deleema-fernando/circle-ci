@@ -146,11 +146,16 @@ jobs:
       - image: cimg/go:1.23
     steps:
       - checkout
-      - configure_version
       - configure_rollback
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: Rollback to previous version
-          command: echo "Rolling back to previous version $APP_VERSION"
+          name: Update the latest image to previous version
+          command: |
+            echo "$DOCKER_TOKEN" | docker login -u deleemafernando --password-stdin
+            docker pull deleemafernando/heroes:${APP_VERSION}
+            docker tag deleemafernando/heroes:${APP_VERSION} deleemafernando/heroes:latest
+            docker push deleemafernando/heroes:latest
 
 workflows:
   lint-test-build:
@@ -187,17 +192,22 @@ workflows:
           requires:
             - build-image
 
-  rollback_app:
-    when:
-      matches:
-        pattern: "/[0-9]+(.[0-9]+){2}-rollback/"
-        value: << pipeline.git.tag >>
-    jobs:
-      - rollback:
-          <<: *run_on_tag
+  # rollback_app:
+  #   when:
+  #     matches:
+  #       pattern: "/[0-9]+(.[0-9]+){2}-rollback/"
+  #       value: << pipeline.git.tag >>
+  #   jobs:
+  #     - rollback:
+  #         <<: *run_on_tag
 
   rollback_previous:
-    when: << pipeline.parameters.rollback >>
+    when:
+      and:
+        - << pipeline.parameters.rollback >>
+        - equal:
+            - << pipeline.git.branch >>
+            - main
     jobs:
       - approval:
           name: 🚒 Rollback to previous version
