@@ -34,25 +34,29 @@ func main() {
 	server := &http.Server{
 		Addr: ":1990",
 		BaseContext: func(l net.Listener) context.Context {
-			return log.LoggerWithContext(ctx, logger)
+			return log.LoggerWithContext(context.Background(), logger)
 		},
 		Handler: app.Routes(),
 	}
 
-	server.RegisterOnShutdown(func() {
-		logger.Info("server shutting down")
-		time.Sleep(2 * time.Second)
-	})
+	serverShutdownChan := make(chan struct{})
 
 	go func() {
 		<-ctx.Done()
 
-		timeOutCtx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
+		logger.Info("shutting down the server gracefully")
+
+		timeOutCtx, cancelTimeout := context.WithTimeout(ctx, 5*time.Second)
 		defer cancelTimeout()
 
 		if err := server.Shutdown(timeOutCtx); err != nil {
 			logger.Error("server shutdown error", "error", err)
 		}
+
+		<-timeOutCtx.Done()
+		logger.Info("server shutdown gracefully")
+		time.Sleep(1 * time.Second)
+		serverShutdownChan <- struct{}{}
 	}()
 
 	if err := server.ListenAndServe(); err != nil {
@@ -66,4 +70,5 @@ func main() {
 		return
 	}
 
+	<-serverShutdownChan
 }
