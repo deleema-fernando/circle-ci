@@ -12,6 +12,8 @@ import (
 
 	"super-heroes/internal/app"
 	"super-heroes/internal/pkg/log"
+
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 var version string
@@ -29,7 +31,21 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	app := app.New(app.Config{})
+	nrApp, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("NR-heroes-service-dev"),
+		newrelic.ConfigLicense(os.Getenv("NEW_RELIC_DEV_KEY")),
+		newrelic.ConfigAppLogEnabled(true),
+		newrelic.ConfigDistributedTracerEnabled(true),
+	)
+	if err != nil {
+		logger.Error("newrelic application error", "error", err)
+
+		return
+	}
+
+	app := app.New(app.Config{
+		NR: nrApp,
+	})
 
 	server := &http.Server{
 		Addr: ":1990",
@@ -55,7 +71,8 @@ func main() {
 
 		<-timeOutCtx.Done()
 		logger.Info("server shutdown gracefully")
-		time.Sleep(1 * time.Second)
+		nrApp.Shutdown(1 * time.Second)
+		time.Sleep(3 * time.Second)
 		serverShutdownChan <- struct{}{}
 	}()
 
